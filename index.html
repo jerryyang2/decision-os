@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>DECISION // OS</title>
+    
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💠</text></svg>">
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700;900&display=swap" rel="stylesheet">
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#000000">
+
+    <style>
+        /* --- DYNAMIC THEME VARIABLES --- */
+        :root {
+            /* Default: CYBER BLUE */
+            --bg-color: #000205;
+            --main-color: #00f3ff;  /* Cyan */
+            --sub-color: #0077ff;   /* Blue */
+            --text-color: #e0f7ff;
+            --alert-color: #ff9d00;
+            --glass-bg: rgba(0, 10, 20, 0.7);
+            --font-main: 'Rajdhani', sans-serif;
+        }
+
+        /* THEME: RED (CRISIS) */
+        [data-theme="red"] {
+            --bg-color: #050000;
+            --main-color: #ff3333;
+            --sub-color: #990000;
+            --text-color: #ffe0e0;
+            --alert-color: #ffcc00;
+            --glass-bg: rgba(20, 0, 0, 0.7);
+        }
+
+        /* THEME: GREEN (MATRIX) */
+        [data-theme="green"] {
+            --bg-color: #000500;
+            --main-color: #00ff41;
+            --sub-color: #008f11;
+            --text-color: #e0ffe0;
+            --alert-color: #ffffff;
+            --glass-bg: rgba(0, 20, 0, 0.7);
+        }
+
+        /* THEME: PURPLE (NEON) */
+        [data-theme="purple"] {
+            --bg-color: #050005;
+            --main-color: #d600ff;
+            --sub-color: #7000ff;
+            --text-color: #fce0ff;
+            --alert-color: #00f3ff;
+            --glass-bg: rgba(15, 0, 20, 0.7);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: var(--font-main);
+            margin: 0; padding: 0;
+            height: 100vh; overflow: hidden;
+            display: flex; flex-direction: column; align-items: center;
+            user-select: none; -webkit-tap-highlight-color: transparent;
+            transition: background-color 0.5s;
+        }
+
+        /* RESET iOS STYLES */
+        input, button, select { -webkit-appearance: none; appearance: none; border-radius: 0; }
+
+        /* --- BACKGROUND FX --- */
+        #warpCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+        .overlay-vignette {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1;
+            background: radial-gradient(circle, transparent 40%, var(--bg-color) 100%);
+        }
+
+        /* --- LOADING SCREEN (BOOT) --- */
+        #bootScreen {
+            position: fixed; top:0; left:0; width:100%; height:100%; background: #000; z-index: 9999;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            transition: opacity 0.5s;
+        }
+        .boot-loader {
+            width: 200px; height: 4px; background: #222; margin-top: 20px; position: relative; overflow: hidden;
+        }
+        .boot-bar {
+            width: 100%; height: 100%; background: var(--main-color);
+            transform: translateX(-100%); animation: bootLoad 1.5s ease-in-out forwards;
+        }
+        @keyframes bootLoad { 0%{transform: translateX(-100%);} 100%{transform: translateX(0%);} }
+        .boot-text { color: var(--main-color); letter-spacing: 5px; font-weight: bold; font-size: 1.5rem; animation: flicker 0.2s infinite; }
+
+        /* --- UI COMPONENTS --- */
+        .glass-panel {
+            background: var(--glass-bg); backdrop-filter: blur(6px);
+            border: 1px solid rgba(255,255,255,0.1); border-top: 1px solid var(--main-color);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); border-radius: 6px;
+            transition: border-color 0.5s;
+        }
+
+        /* --- HEADER --- */
+        .header-bar {
+            z-index: 20; width: 100%; max-width: 500px;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 15px 20px 0 20px;
+        }
+        .app-title { font-weight: 900; font-size: 1.2rem; letter-spacing: 2px; color: var(--main-color); text-shadow: 0 0 10px var(--sub-color); }
+        
+        .top-controls { display: flex; gap: 8px; }
+        .icon-btn {
+            background: rgba(0,0,0,0.5); border: 1px solid var(--main-color);
+            color: var(--main-color); width: 30px; height: 30px; 
+            font-size: 0.9rem; cursor: pointer; display: flex; justify-content: center; align-items: center;
+            clip-path: polygon(5px 0, 100% 0, 100% 100%, 0 100%, 0 5px);
+        }
+        .icon-btn.muted { opacity: 0.5; text-decoration: line-through; }
+
+        /* --- THEME SELECTOR BAR --- */
+        .theme-bar {
+            z-index: 19; display: flex; gap: 5px; margin-top: 10px;
+        }
+        .theme-dot {
+            width: 12px; height: 12px; border-radius: 50%; cursor: pointer; border: 1px solid #555;
+            transition: transform 0.2s;
+        }
+        .theme-dot:hover, .theme-dot.active { transform: scale(1.3); border-color: #fff; box-shadow: 0 0 10px #fff;}
+        .t-blue { background: #00f3ff; } .t-red { background: #ff3333; }
+        .t-green { background: #00ff41; } .t-purple { background: #d600ff; }
+
+        /* --- TABS --- */
+        .tabs { z-index: 20; display: flex; width: 100%; max-width: 500px; margin-top: 10px; padding: 0 10px; gap: 10px; }
+        .tab-btn {
+            flex: 1; padding: 10px; background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.2); color: var(--sub-color);
+            font-family: var(--font-main); font-weight: 700; font-size: 1rem; letter-spacing: 2px;
+            cursor: pointer; transition: 0.3s; transform: skewX(-15deg);
+        }
+        .tab-btn span { display: block; transform: skewX(15deg); } 
+        .tab-btn.active {
+            background: rgba(255,255,255,0.1); border-color: var(--main-color);
+            color: var(--main-color); box-shadow: 0 0 15px var(--main-color);
+        }
+
+        /* --- CONTENT AREAS --- */
+        .content-view {
+            display: none; width: 100%; flex-direction: column; align-items: center;
+            z-index: 10; flex: 1; animation: slideUp 0.4s ease-out;
+            overflow-y: auto; padding-bottom: 80px;
+        }
+        .content-view.active { display: flex; }
+        @keyframes slideUp { 0%{opacity:0; transform: translateY(10px);} 100%{opacity:1; transform: translateY(0);} }
+
+        /* --- CONTROL PANEL --- */
+        .control-panel { width: 90%; max-width: 500px; margin-top: 15px; text-align: center; flex-shrink: 0; }
+        
+        .input-group { display: flex; gap: 0; margin-bottom: 10px; border: 1px solid var(--sub-color); }
+        input[type="text"], input[type="number"] {
+            flex: 1; background: rgba(0,0,0,0.3); border: none;
+            color: #fff; padding: 12px; font-family: var(--font-main); font-size: 1.3rem; font-weight: bold;
+            text-transform: uppercase; text-align: center; letter-spacing: 1px;
+        }
+        input:focus { outline: none; background: rgba(255,255,255,0.05); }
+        
+        button.btn-add {
+            background: rgba(255,255,255,0.1); border: none; border-left: 1px solid var(--sub-color);
+            color: var(--main-color); padding: 0 25px; font-family: var(--font-main); font-size: 1.2rem;
+            font-weight: bold; cursor: pointer; transition: 0.2s;
+        }
+        button:active { background: var(--main-color); color:#000;}
+
+        /* SLOTS (SAVE SYSTEM) */
+        .slot-system { display: flex; gap: 5px; margin-bottom: 10px; justify-content: center; }
+        .slot-btn {
+            background: transparent; border: 1px solid #444; color: #666; 
+            font-size: 0.7rem; padding: 4px 8px; cursor: pointer; font-family: var(--font-main);
+        }
+        .slot-btn:hover { border-color: var(--main-color); color: var(--main-color); }
+        .slot-btn.active { background: var(--main-color); color: #000; border-color: var(--main-color); font-weight: bold; }
+
+        /* SPEED SLIDER */
+        .speed-control { margin-bottom: 15px; display: flex; align-items: center; gap: 10px; padding: 0 5px; }
+        .speed-label { color: var(--sub-color); font-size: 0.7rem; letter-spacing: 1px; white-space: nowrap;}
+        input[type=range] { flex: 1; -webkit-appearance: none; background: transparent; cursor: pointer; }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; background: #111; border: 1px solid #333; }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 16px; width: 10px; background: var(--main-color);
+            margin-top: -7px; box-shadow: 0 0 10px var(--main-color);
+        }
+
+        /* ITEM LIST */
+        .item-list-container {
+            width: 100%; margin-top: 5px; max-height: 180px; overflow-y: auto;
+            border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;
+        }
+        .list-item {
+            display: flex; justify-content: space-between; align-items: center;
+            background: linear-gradient(90deg, rgba(255,255,255,0.05), transparent);
+            margin-bottom: 4px; padding: 10px 15px; font-size: 1.1rem; color: var(--text-color);
+            border-left: 2px solid transparent; transition: 0.2s;
+        }
+        .list-item:hover { border-left-color: var(--main-color); background: rgba(255,255,255,0.1); }
+        .btn-del {
+            background: none; border: none; color: #555; font-size: 1.2rem; cursor: pointer; transition: 0.2s;
+        }
+        .btn-del:hover { color: var(--alert-color); transform: scale(1.2); }
+
+        /* --- RADAR --- */
+        .radar-wrapper { position: relative; margin: 20px auto; flex-shrink: 0; }
+        .radar-container {
+            position: relative; width: 280px; height: 280px; border-radius: 50%; 
+            border: 1px solid rgba(255,255,255,0.2);
+            box-shadow: 0 0 30px rgba(0,0,0,0.5), inset 0 0 30px var(--glass-bg);
+            display: flex; justify-content: center; align-items: center;
+            background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%);
+        }
+        .radar-container::before {
+            content:''; position: absolute; width: 85%; height: 85%; border-radius: 50%;
+            border: 1px dashed var(--sub-color); animation: spinSlow 60s linear infinite; opacity: 0.5;
+        }
+        @keyframes spinSlow { to { transform: rotate(360deg); } }
+
+        .radar-item {
+            position: absolute; transform-origin: center center;
+            color: var(--main-color); font-size: 0.9rem; white-space: nowrap; font-weight: 500;
+            text-shadow: 0 0 5px var(--main-color); transition: 0.3s; opacity: 0.6; pointer-events: none;
+        }
+        .radar-item.active { 
+            color: #fff; font-weight: 800; font-size: 1.2rem; 
+            text-shadow: 0 0 10px #fff, 0 0 20px var(--main-color); 
+            z-index: 10; opacity: 1; transform: scale(1.2) translate(-50%, -50%);
+        }
+        .scanner-arm {
+            position: absolute; top: 50%; left: 50%; width: 50%; height: 2px;
+            background: linear-gradient(90deg, transparent, var(--main-color));
+            transform-origin: 0% 50%; box-shadow: 0 0 15px var(--main-color);
+            pointer-events: none; z-index: 8;
+        }
+        .core-hub {
+            position: absolute; width: 80px; height: 80px; 
+            background: rgba(0,0,0,0.8); border: 2px solid var(--main-color); border-radius: 50%;
+            z-index: 20; display: flex; justify-content: center; align-items: center;
+            box-shadow: 0 0 30px var(--sub-color); cursor: pointer; transition: 0.3s;
+            top: 50%; left: 50%; transform: translate(-50%, -50%); backdrop-filter: blur(5px);
+        }
+        .core-hub:hover { box-shadow: 0 0 50px var(--main-color); border-color: #fff; }
+        .core-text { font-size: 0.9rem; color: var(--main-color); font-weight: 800; letter-spacing: 1px; }
+
+        /* --- NUMERIC --- */
+        .numeric-display-container {
+            margin: auto; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; flex:1;
+        }
+        .digit-box {
+            font-family: var(--font-main); font-size: 6rem; color: #fff; font-weight: 700;
+            text-shadow: 0 0 20px var(--sub-color); letter-spacing: 2px;
+            margin-bottom: 20px; position: relative;
+        }
+        .digit-box::after {
+            content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+            width: 100%; height: 2px; background: var(--main-color); box-shadow: 0 0 15px var(--main-color);
+        }
+        .limit-label { color: var(--sub-color); font-size: 0.9rem; margin-bottom:5px; text-transform: uppercase; letter-spacing: 2px;}
+
+        /* --- IMPACT OVERLAY --- */
+        #resultOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.95); z-index: 100;
+            display: none; flex-direction: column; justify-content: center; align-items: center;
+            backdrop-filter: blur(15px);
+        }
+        .impact-box {
+            border: 2px solid var(--alert-color); border-left-width: 10px; border-right-width: 10px;
+            padding: 40px 20px; text-align: center; position: relative; animation: zoomIn 0.2s ease-out;
+            background: rgba(20, 20, 20, 0.9); max-width: 90%; width: 90%;
+            box-shadow: 0 0 50px rgba(255,255,255,0.1);
+        }
+        @keyframes zoomIn { 0%{transform: scale(0.9); opacity: 0;} 100%{transform: scale(1); opacity: 1;} }
+
+        .impact-label { color: var(--alert-color); font-size: 1rem; letter-spacing: 5px; margin-bottom: 20px; font-weight: bold; }
+        .impact-result { 
+            color: #fff; font-size: 3.5rem; font-weight: 800; 
+            text-shadow: 0 0 30px var(--alert-color);
+            text-transform: uppercase; margin-bottom: 40px; word-break: break-word; line-height: 1.1;
+        }
+        .btn-confirm {
+            background: var(--alert-color); border: none; color: #000;
+            padding: 15px 50px; font-size: 1.2rem; cursor: pointer;
+            font-family: var(--font-main); font-weight: 900; letter-spacing: 2px;
+            clip-path: polygon(15px 0, 100% 0, 100% 100%, 0 100%, 0 15px); transition: 0.2s;
+        }
+        .btn-confirm:hover { background: #fff; box-shadow: 0 0 20px #fff; }
+
+        .controls-bottom { position: fixed; bottom: 30px; width: 100%; text-align: center; z-index: 20; }
+        .btn-clear { 
+            background: none; border: 1px solid rgba(255,255,255,0.2); color: #666; 
+            font-size: 0.8rem; padding: 8px 20px; font-family: var(--font-main); letter-spacing: 1px; transition: 0.3s;
+        }
+        .btn-clear:hover { color: #fff; border-color: #fff; background: rgba(255,255,255,0.1); }
+
+    </style>
+</head>
+<body>
+
+<div id="bootScreen">
+    <div class="boot-text">DECISION // KERNEL</div>
+    <div class="boot-loader"><div class="boot-bar"></div></div>
+</div>
+
+<canvas id="warpCanvas"></canvas>
+<div class="overlay-vignette"></div>
+
+<div class="header-bar">
+    <div class="app-title">DECISION // OS</div>
+    <div class="top-controls">
+        <button class="icon-btn" id="muteBtn" onclick="toggleMute()">🔊</button>
+    </div>
+</div>
+
+<div class="theme-bar">
+    <div class="theme-dot t-blue active" onclick="setTheme('blue')"></div>
+    <div class="theme-dot t-red" onclick="setTheme('red')"></div>
+    <div class="theme-dot t-green" onclick="setTheme('green')"></div>
+    <div class="theme-dot t-purple" onclick="setTheme('purple')"></div>
+</div>
+
+<div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('target')"><span>TARGETS</span></button>
+    <button class="tab-btn" onclick="switchTab('numeric')"><span>NUMERIC</span></button>
+</div>
+
+<div id="view-target" class="content-view active">
+    <div class="control-panel glass-panel" style="padding: 20px;">
+        <div class="slot-system">
+            <button class="slot-btn active" id="slot-0" onclick="changeSlot(0)">SLOT A</button>
+            <button class="slot-btn" id="slot-1" onclick="changeSlot(1)">SLOT B</button>
+            <button class="slot-btn" id="slot-2" onclick="changeSlot(2)">SLOT C</button>
+        </div>
+
+        <div class="input-group">
+            <input type="text" id="itemInput" placeholder="ENTER TARGET..." onkeypress="handleEnter(event)">
+            <button class="btn-add" onclick="addItem()">ADD</button>
+        </div>
+        
+        <div class="speed-control">
+            <span class="speed-label">SPEED:</span>
+            <input type="range" id="radarSpeed" min="1" max="10" value="5" oninput="updateSysSpeed(this.value)">
+        </div>
+
+        <div class="item-list-container" id="itemList"></div>
+    </div>
+
+    <div class="radar-wrapper">
+        <div class="radar-container" id="radarDish">
+            <div class="scanner-arm" id="scannerArm"></div>
+            <div class="core-hub" onclick="engageRadar()">
+                <div class="core-text">ENGAGE</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="controls-bottom">
+        <button class="btn-clear" onclick="clearData()">// PURGE SLOT DATA</button>
+    </div>
+</div>
+
+<div id="view-numeric" class="content-view">
+    <div class="numeric-display-container">
+        <div class="digit-box" id="digitDisplay">000</div>
+        
+        <div class="control-panel glass-panel" style="padding: 25px;">
+            <div class="limit-label">UPPER LIMIT PARAMETER</div>
+            <div class="input-group" style="border:1px solid var(--alert-color);">
+                <input type="number" id="numLimit" value="100" min="2" style="color:var(--alert-color);">
+                <button class="btn-add" onclick="engageNumeric()" style="border-left:1px solid var(--alert-color); color:var(--alert-color);">ROLL</button>
+            </div>
+            <div class="speed-control" style="margin-top:15px;">
+                <span class="speed-label" style="color:var(--alert-color)">SPEED:</span>
+                <input type="range" id="numSpeed" min="1" max="10" value="5" oninput="updateSysSpeed(this.value)" style="accent-color: var(--alert-color);">
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="resultOverlay">
+    <div class="impact-box">
+        <div class="impact-label" id="resLabel">TARGET LOCKED</div>
+        <div class="impact-result" id="resultText">???</div>
+        <button class="btn-confirm" onclick="closeOverlay()">ACKNOWLEDGE</button>
+    </div>
+</div>
+
+<script>
+    // --- 0. BOOT & INIT ---
+    window.onload = function() {
+        initWarp(); drawWarp();
+        loadSettings();
+        // Fake Boot Delay
+        setTimeout(() => {
+            document.getElementById('bootScreen').style.opacity = 0;
+            setTimeout(() => document.getElementById('bootScreen').style.display = 'none', 500);
+        }, 1200);
+    };
+
+    // --- 1. Reactive Warp Drive ---
+    const cvs = document.getElementById('warpCanvas'), ctx = cvs.getContext('2d');
+    let width, height;
+    let stars = [];
+    const starCount = 350;
+    let speedBase = 1; 
+    let sysSpeedMult = 5; 
+    let warpState = 'idle'; 
+    let currentThemeColor = '#00f3ff'; // Default
+
+    function initWarp() {
+        width = window.innerWidth; height = window.innerHeight;
+        cvs.width = width; cvs.height = height;
+        stars = [];
+        for(let i=0; i<starCount; i++) {
+            stars.push({
+                x: Math.random() * width - width/2, y: Math.random() * height - height/2,
+                z: Math.random() * width,
+                char: Math.random() > 0.5 ? (Math.random() > 0.5 ? '1' : '0') : ['A','F','X'][Math.floor(Math.random()*3)]
+            });
+        }
+    }
+
+    function drawWarp() {
+        let trailOpacity = 0.3;
+        if(warpState === 'boost') trailOpacity = 0.1;
+        
+        ctx.fillStyle = `rgba(0, 2, 5, ${trailOpacity})`;
+        ctx.fillRect(0, 0, width, height);
+        
+        const cx = width/2; const cy = height/2;
+        let effectiveSpeed = (sysSpeedMult * 0.2) + 0.5; 
+        if (warpState === 'boost') effectiveSpeed = sysSpeedMult * 2.5; 
+        
+        // Get Main Color from CSS
+        const style = getComputedStyle(document.body);
+        const mainColor = style.getPropertyValue('--main-color').trim() || '#00f3ff';
+
+        for(let i=0; i<stars.length; i++) {
+            let star = stars[i];
+            star.z -= effectiveSpeed;
+            if(star.z <= 0) {
+                star.x = Math.random() * width - width/2;
+                star.y = Math.random() * height - height/2;
+                star.z = width;
+            }
+            const k = 128.0 / star.z;
+            const px = star.x * k + cx;
+            const py = star.y * k + cy;
+
+            if(px >= 0 && px <= width && py >= 0 && py <= height) {
+                const size = (1 - star.z / width) * 20; 
+                const alpha = (1 - star.z / width); 
+                ctx.font = `bold ${size}px monospace`;
+                ctx.fillStyle = warpState === 'boost' ? `rgba(255, 255, 255, ${alpha})` : hexToRgbA(mainColor, alpha);
+                ctx.fillText(star.char, px, py);
+            }
+        }
+        requestAnimationFrame(drawWarp);
+    }
+    
+    function hexToRgbA(hex, alpha){
+        var c;
+        if(/^#([A-Fa-f0-9]{3}){1,2}$/.test(hex)){
+            c= hex.substring(1).split('');
+            if(c.length== 3){
+                c= [c[0], c[0], c[1], c[1], c[2], c[2]];
+            }
+            c= '0x'+c.join('');
+            return 'rgba('+[(c>>16)&255, (c>>8)&255, c&255].join(',')+','+alpha+')';
+        }
+        return 'rgba(0,243,255,'+alpha+')';
+    }
+
+    window.addEventListener('resize', initWarp);
+
+    // --- Audio & Haptics ---
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    let isMuted = false;
+
+    function toggleMute() {
+        isMuted = !isMuted;
+        const btn = document.getElementById('muteBtn');
+        btn.innerHTML = isMuted ? "🔇" : "🔊";
+        btn.classList.toggle('muted', isMuted);
+        localStorage.setItem('arc_mute', isMuted);
+    }
+
+    function playTone(freq, type='sine', dur=0.1, vol=0.1) {
+        if(isMuted) return;
+        if(audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+        osc.type = type; osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(vol, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+        osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + dur);
+    }
+    
+    function triggerHaptic(type) {
+        if (!navigator.vibrate) return;
+        if (type === 'tick') navigator.vibrate(5);
+        if (type === 'lock') navigator.vibrate([50, 50, 100]);
+    }
+
+    // --- 2. System Logic & Themes ---
+    function setTheme(themeName) {
+        if (!['blue', 'red', 'green', 'purple'].includes(themeName)) themeName = 'blue';
+        document.body.setAttribute('data-theme', themeName);
+        document.querySelectorAll('.theme-dot').forEach(d => d.classList.remove('active'));
+        document.querySelector(`.t-${themeName}`).classList.add('active');
+        localStorage.setItem('arc_theme', themeName);
+    }
+
+    function updateSysSpeed(val) {
+        const speed = Number.parseInt(val, 10);
+        sysSpeedMult = Number.isFinite(speed) ? Math.max(1, Math.min(10, speed)) : 5;
+        document.getElementById('radarSpeed').value = sysSpeedMult;
+        document.getElementById('numSpeed').value = sysSpeedMult;
+        playTone(200 + (sysSpeedMult * 100), 'sawtooth', 0.1);
+        localStorage.setItem('arc_speed', sysSpeedMult);
+    }
+
+    function switchTab(mode) {
+        playTone(1200, 'sine', 0.05, 0.05);
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.content-view').forEach(v => v.classList.remove('active'));
+        if (mode === 'target') {
+            document.querySelector('.tab-btn:nth-child(1)').classList.add('active');
+            document.getElementById('view-target').classList.add('active');
+        } else {
+            document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
+            document.getElementById('view-numeric').classList.add('active');
+        }
+    }
+
+    // --- 3. Data Slots System ---
+    let currentSlot = 0;
+    let allSlots = [[], [], []]; 
+
+    function loadSettings() {
+        if(localStorage.getItem('arc_mute') === 'true') toggleMute();
+        const th = localStorage.getItem('arc_theme') || 'blue';
+        setTheme(th);
+        const sp = localStorage.getItem('arc_speed');
+        if(sp) updateSysSpeed(sp);
+        const savedData = localStorage.getItem('arc_slots');
+        if(savedData) {
+            try {
+                const parsed = JSON.parse(savedData);
+                if (Array.isArray(parsed)) {
+                    allSlots = [0, 1, 2].map(i => Array.isArray(parsed[i])
+                        ? parsed[i].filter(item => typeof item === 'string').slice(0, 100).map(item => item.slice(0, 100))
+                        : []);
+                }
+            } catch (error) {
+                console.warn('Saved target data is invalid; using empty slots.');
+            }
+        }
+        changeSlot(0); 
+    }
+
+    function changeSlot(index) {
+        currentSlot = index;
+        document.querySelectorAll('.slot-btn').forEach((b, i) => {
+            b.classList.toggle('active', i === index);
+        });
+        playTone(600, 'square', 0.05);
+        renderRadar(); renderList();
+    }
+
+    function saveData() { localStorage.setItem('arc_slots', JSON.stringify(allSlots)); }
+    function getCurrItems() { return allSlots[currentSlot]; }
+
+    function addItem() {
+        const input = document.getElementById('itemInput'); const val = input.value.trim();
+        if (val && getCurrItems().length < 100) {
+            allSlots[currentSlot].push(val.slice(0, 100));
+            saveData(); renderRadar(); renderList(); input.value = ''; input.focus();
+        } else if (getCurrItems().length >= 100) {
+            alert('Maximum of 100 targets per slot.');
+        }
+    }
+    function handleEnter(e) { if(e.key === 'Enter') addItem(); }
+    function deleteItem(index) { allSlots[currentSlot].splice(index, 1); saveData(); renderRadar(); renderList(); }
+    function clearData() { if(confirm("CONFIRM FLUSH CURRENT SLOT?")) { allSlots[currentSlot] = []; saveData(); renderRadar(); renderList(); } }
+
+    function renderList() {
+        const listEl = document.getElementById('itemList');
+        listEl.replaceChildren();
+        getCurrItems().forEach((item, i) => {
+            const row = document.createElement('div');
+            row.className = 'list-item';
+            const label = document.createElement('span');
+            label.textContent = item;
+            const remove = document.createElement('button');
+            remove.type = 'button';
+            remove.className = 'btn-del';
+            remove.textContent = '×';
+            remove.setAttribute('aria-label', 'Remove target');
+            remove.addEventListener('click', () => deleteItem(i));
+            row.append(label, remove);
+            listEl.append(row);
+        });
+    }
+
+    function renderRadar() {
+        const dish = document.getElementById('radarDish');
+        const oldItems = dish.querySelectorAll('.radar-item'); oldItems.forEach(el => el.remove());
+        const items = getCurrItems();
+        if(items.length === 0) return;
+        const angleStep = (2 * Math.PI) / items.length;
+        items.forEach((item, index) => {
+            const el = document.createElement('div'); el.className = 'radar-item'; el.innerText = item;
+            const angle = index * angleStep - (Math.PI / 2);
+            el.style.left = `calc(50% + ${Math.cos(angle)*110}px)`;
+            el.style.top = `calc(50% + ${Math.sin(angle)*110}px)`;
+            el.style.transform = "translate(-50%, -50%)";
+            dish.appendChild(el);
+        });
+    }
+
+    // --- 4. Logic Engines ---
+    let isProcessing = false;
+    let radarFrame;
+    
+    function engageRadar() {
+        const items = getCurrItems();
+        if(isProcessing || items.length < 2) { if(items.length<2) alert("INSUFFICIENT DATA"); return; }
+        isProcessing = true;
+        document.querySelector('.core-text').innerText = "SCANNING";
+        warpState = 'boost';
+
+        const winnerIndex = Math.floor(Math.random() * items.length);
+        const sectorAngle = 360 / items.length;
+        const extraSpins = (11 - sysSpeedMult) * 360; 
+        const targetRotation = (winnerIndex * sectorAngle) + extraSpins; 
+        
+        let deg = 0; let speed = 2; let phase = 'accel'; let lastBeep = 0;
+        const maxRotSpeed = 10 + (sysSpeedMult * 5); 
+
+        function loop() {
+            if(phase === 'accel') { speed += sysSpeedMult * 0.5; if(speed >= maxRotSpeed) phase = 'cruise'; }
+            else if(phase === 'cruise') { if(deg > targetRotation - (maxRotSpeed*30)) phase = 'decel'; }
+            else { 
+                const dist = targetRotation - deg; speed = dist * 0.05; 
+                if(speed < 0.5) speed = 0.5;
+                if(dist < 0.5) { finishRadar(winnerIndex); return; }
+            }
+            deg += speed;
+            document.getElementById('scannerArm').style.transform = `rotate(${deg}deg)`;
+            
+            if(deg - lastBeep > (6000/(speed+10))) { 
+                playTone(600 + speed*10, 'sine', 0.05, 0.05); 
+                triggerHaptic('tick');
+                lastBeep = deg; 
+            }
+            radarFrame = requestAnimationFrame(loop);
+        }
+        loop();
+    }
+
+    function finishRadar(idx) {
+        cancelAnimationFrame(radarFrame);
+        warpState = 'idle';
+        document.querySelector('.core-text').innerText = "LOCKED";
+        const items = getCurrItems();
+        const allItems = document.querySelectorAll('.radar-item');
+        if(allItems[idx]) allItems[idx].classList.add('active');
+        playTone(150, 'sawtooth', 0.4); 
+        triggerHaptic('lock');
+        setTimeout(() => showResult(items[idx], "TARGET LOCKED"), 400);
+    }
+
+    function engageNumeric() {
+        if(isProcessing) return;
+        const max = parseInt(document.getElementById('numLimit').value) || 100;
+        if(max < 2) return;
+        
+        isProcessing = true;
+        warpState = 'boost';
+        const display = document.getElementById('digitDisplay');
+        const baseInterval = 100 - (sysSpeedMult * 8); 
+        let currentInterval = baseInterval;
+        let count = 0;
+        const totalSteps = 10 + (11 - sysSpeedMult) * 5; 
+        
+        const rollLoop = () => {
+            const rnd = Math.floor(Math.random() * max) + 1;
+            display.innerText = rnd.toString().padStart(3, '0');
+            playTone(800 + Math.random()*200, 'square', 0.03, 0.03);
+            triggerHaptic('tick');
+            count++;
+            if(count > totalSteps) {
+                warpState = 'idle';
+                const finalNum = Math.floor(Math.random() * max) + 1;
+                display.innerText = finalNum.toString().padStart(3, '0');
+                display.style.color = "var(--alert-color)";
+                display.style.textShadow = "0 0 30px var(--alert-color)";
+                playTone(150, 'sawtooth', 0.4);
+                triggerHaptic('lock');
+                setTimeout(() => showResult(finalNum, "VALUE GENERATED"), 400);
+            } else {
+                if(count > totalSteps - 5) currentInterval += 20;
+                setTimeout(rollLoop, currentInterval);
+            }
+        };
+        rollLoop();
+    }
+
+    // --- 5. Result & Decoding Effect ---
+    function showResult(val, label) {
+        const overlay = document.getElementById('resultOverlay');
+        const resText = document.getElementById('resultText');
+        document.getElementById('resLabel').innerText = label;
+        overlay.style.display = 'flex';
+        
+        const chars = "ABCDEF0123456789XY#$@%";
+        let iteration = 0;
+        const finalVal = val.toString();
+        
+        const decodeInt = setInterval(() => {
+            resText.innerText = finalVal.split("").map((letter, index) => {
+                if(index < iteration) return finalVal[index];
+                return chars[Math.floor(Math.random() * 20)];
+            }).join("");
+            
+            if(iteration >= finalVal.length) clearInterval(decodeInt);
+            iteration += 1/3;
+        }, 50);
+
+        [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => playTone(f, 'square', 0.15, 0.1), i*80));
+    }
+
+    function closeOverlay() {
+        document.getElementById('resultOverlay').style.display = 'none';
+        isProcessing = false;
+        document.querySelector('.core-text').innerText = "ENGAGE";
+        document.querySelectorAll('.radar-item').forEach(el => el.classList.remove('active'));
+        document.getElementById('digitDisplay').style.color = "#fff";
+        document.getElementById('digitDisplay').style.textShadow = "0 0 20px var(--sub-color)";
+    }
+</script>
+
+</body>
+</html>
